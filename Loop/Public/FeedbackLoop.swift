@@ -167,26 +167,6 @@ extension Loop {
                       effects: { $0.map(effects)?.producer ?? .empty })
         }
 
-        /// Creates a Feedback which re-evaluates the given effect every time the
-        /// given predicate passes.
-        ///
-        /// If the previous effect is still alive when a new one is about to start,
-        /// the previous one would automatically be cancelled.
-        ///
-        /// - parameters:
-        ///   - predicate: The predicate to apply on the state.
-        ///   - effects: The side effect accepting the state and yielding events
-        ///              that eventually affect the state.
-        public init<Effect: SignalProducerConvertible>(
-            predicate: @escaping (State) -> Bool,
-            effects: @escaping (State) -> Effect
-        ) where Effect.Value == Event, Effect.Error == Never {
-            self.init(compacting: { $0 },
-                      effects: { state -> SignalProducer<Event, Never> in
-                          predicate(state) ? effects(state).producer : .empty
-                      })
-        }
-
         /// Create a feedback which (re)starts the effect every time `transform` emits a non-nil value after a sequence
         /// of `nil`, and ignore all the non-nil value afterwards. It does so until `transform` starts emitting a `nil`,
         /// at which point the feedback cancels any outstanding effect.
@@ -231,21 +211,6 @@ extension Loop {
           )
         }
 
-        /// Creates a Feedback which re-evaluates the given effect every time the
-        /// state changes.
-        ///
-        /// If the previous effect is still alive when a new one is about to start,
-        /// the previous one would automatically be cancelled.
-        ///
-        /// - parameters:
-        ///   - effects: The side effect accepting the state and yielding events
-        ///              that eventually affect the state.
-        public init<Effect: SignalProducerConvertible>(
-            effects: @escaping (State) -> Effect
-        ) where Effect.Value == Event, Effect.Error == Never {
-            self.init(compacting: { $0 }, effects: effects)
-        }
-        
         public static var input: (feedback: Feedback, observer: (Event) -> Void) {
             let pipe = Signal<Event, Never>.pipe()
             let feedback = Feedback(source: pipe.output, as: { $0 })
@@ -279,6 +244,43 @@ extension Loop {
 }
 
 extension Loop.Feedback {
+    /// Creates a Feedback which re-evaluates the given effect every time the
+    /// given predicate passes.
+    ///
+    /// If the previous effect is still alive when a new one is about to start,
+    /// the previous one would automatically be cancelled.
+    ///
+    /// - parameters:
+    ///   - predicate: The predicate to apply on the state.
+    ///   - effects: The side effect accepting the state and yielding events
+    ///              that eventually affect the state.
+    @available(*, deprecated, message:"Use `Feedback.init(whenBecomesTrue:effects:)`, or other more appropriate variants.")
+    public init<Effect: SignalProducerConvertible>(
+        predicate: @escaping (State) -> Bool,
+        effects: @escaping (State) -> Effect
+    ) where Effect.Value == Event, Effect.Error == Never {
+        self.init(compacting: { $0 },
+                  effects: { state -> SignalProducer<Event, Never> in
+                      predicate(state) ? effects(state).producer : .empty
+                  })
+    }
+
+    /// Creates a Feedback which re-evaluates the given effect every time the
+    /// state changes.
+    ///
+    /// If the previous effect is still alive when a new one is about to start,
+    /// the previous one would automatically be cancelled.
+    ///
+    /// - parameters:
+    ///   - effects: The side effect accepting the state and yielding events
+    ///              that eventually affect the state.
+    @available(*, deprecated, message:"Use `Feedback.init(whenBecomesTrue:effects:)`, or other more appropriate variants.")
+    public init<Effect: SignalProducerConvertible>(
+        effects: @escaping (State) -> Effect
+    ) where Effect.Value == Event, Effect.Error == Never {
+        self.init(compacting: { $0 }, effects: effects)
+    }
+
     @available(*, deprecated, renamed:"init(_:)")
     public static func custom(
         _ setup: @escaping (
